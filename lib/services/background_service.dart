@@ -1,3 +1,5 @@
+import 'dart:convert';
+import 'dart:io';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:workmanager/workmanager.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -60,6 +62,7 @@ void callbackDispatcher() {
     }
 
     if (task == 'checkLateTasks') {
+      // 1. Existing late task notifications
       for (var complaint in pendingComplaints) {
         final created = DateTime.parse(complaint.createdAt);
         final diff = DateTime.now().difference(created).inDays;
@@ -72,6 +75,33 @@ void callbackDispatcher() {
             notificationDetails: platformDetails,
           );
         }
+      }
+
+      // 2. Silent update check in background
+      try {
+        final updateRequest = await HttpClient().getUrl(
+          Uri.parse("https://raw.githubusercontent.com/amal0xb1/best_cool_releases/main/update.json")
+        );
+        final updateResponse = await updateRequest.close();
+        if (updateResponse.statusCode == 200) {
+          final resBody = await updateResponse.transform(utf8.decoder).join();
+          final Map<String, dynamic> data = json.decode(resBody);
+          final int remoteVersionCode = data['versionCode'] ?? 0;
+          final String remoteVersionName = data['versionName'] ?? '';
+          
+          const int currentVersionCode = 2;
+
+          if (remoteVersionCode > currentVersionCode) {
+            await flutterLocalNotificationsPlugin.show(
+              id: 9995,
+              title: 'Best Cool Update Available! 🚀',
+              body: 'Version $remoteVersionName is ready. Tap to check out the changelog.',
+              notificationDetails: platformDetails,
+            );
+          }
+        }
+      } catch (e) {
+        // Fail silently in background
       }
     }
 
