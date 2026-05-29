@@ -2,7 +2,8 @@ import 'dart:convert';
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:url_launcher/url_launcher.dart';
+import 'package:path_provider/path_provider.dart';
+import 'package:open_file_plus/open_file_plus.dart';
 
 class UpdateService {
   // Local app version tracking
@@ -62,11 +63,126 @@ class UpdateService {
       debugPrint('Error checking for updates: $e');
       if (showSnackbarIfLatest && context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Cannot check for updates: Check your internet connection.')),
+          const SnackBar(content: Text('Cannot check for updates: Check your internet connection.')),
         );
       }
     } finally {
       client.close();
+    }
+  }
+
+  /// Downloads the APK in the background while displaying a glassmorphic progress bar, then triggers install
+  static Future<void> _downloadAndInstallApk(BuildContext context, String url) async {
+    final ValueNotifier<double> progressNotifier = ValueNotifier<double>(0.0);
+    
+    // Show download progress dialog
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (BuildContext context) {
+        return ValueListenableBuilder<double>(
+          valueListenable: progressNotifier,
+          builder: (context, progress, child) {
+            final isDark = Theme.of(context).brightness == Brightness.dark;
+            return Dialog(
+              backgroundColor: Colors.transparent,
+              child: Container(
+                padding: const EdgeInsets.all(24),
+                decoration: BoxDecoration(
+                  color: isDark ? const Color(0xFF161E1D).withOpacity(0.95) : Colors.white,
+                  borderRadius: BorderRadius.circular(24),
+                  border: Border.all(
+                    color: isDark ? Colors.white.withAlpha(35) : Colors.grey.shade200,
+                    width: 1.5,
+                  ),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withAlpha(isDark ? 80 : 15),
+                      blurRadius: 20,
+                      offset: const Offset(0, 10),
+                    ),
+                  ],
+                ),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const Icon(Icons.downloading, color: Colors.teal, size: 44),
+                    const SizedBox(height: 16),
+                    const Text(
+                      "Downloading Update...",
+                      style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                    ),
+                    const SizedBox(height: 16),
+                    LinearProgressIndicator(
+                      value: progress,
+                      backgroundColor: isDark ? Colors.white.withAlpha(20) : Colors.grey.shade200,
+                      color: Colors.teal,
+                      minHeight: 6,
+                      borderRadius: BorderRadius.circular(4),
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      "${(progress * 100).toStringAsFixed(0)}%",
+                      style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: Colors.teal),
+                    ),
+                  ],
+                ),
+              ),
+            );
+          },
+        );
+      },
+    );
+
+    try {
+      final client = HttpClient();
+      final request = await client.getUrl(Uri.parse(url));
+      final response = await request.close();
+      
+      if (response.statusCode == 200) {
+        final totalBytes = response.contentLength;
+        int receivedBytes = 0;
+        
+        final tempDir = await getTemporaryDirectory();
+        final apkFile = File('${tempDir.path}/app-release.apk');
+        
+        final sink = apkFile.openWrite();
+        
+        await response.forEach((chunk) {
+          sink.add(chunk);
+          receivedBytes += chunk.length;
+          if (totalBytes > 0) {
+            progressNotifier.value = receivedBytes / totalBytes;
+          }
+        });
+        
+        await sink.close();
+        client.close();
+        
+        // Dismiss progress dialog
+        if (context.mounted) {
+          Navigator.pop(context);
+        }
+        
+        // Trigger APK install
+        final result = await OpenFile.open(apkFile.path);
+        if (result.type != ResultType.done) {
+          if (context.mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(content: Text('Could not open installer: ${result.message}')),
+            );
+          }
+        }
+      } else {
+        throw Exception('Download failed with status code: ${response.statusCode}');
+      }
+    } catch (e) {
+      if (context.mounted) {
+        Navigator.pop(context); // Dismiss progress dialog
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Download failed: $e')),
+        );
+      }
     }
   }
 
@@ -228,14 +344,10 @@ class UpdateService {
                           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
                           elevation: 0,
                         ),
-                        onPressed: () async {
-                          final Uri url = Uri.parse(apkUrl);
-                          if (await canLaunchUrl(url)) {
-                            await launchUrl(url, mode: LaunchMode.externalApplication);
-                          }
-                          if (context.mounted) {
-                            Navigator.pop(context);
-                          }
+                        onPressed: () {
+                          // Dismiss version dialog and start download progress overlay
+                          Navigator.pop(context);
+                          _downloadAndInstallApk(context, apkUrl);
                         },
                         child: const Text(
                           "UPDATE",
