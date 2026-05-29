@@ -23,7 +23,7 @@ class UpdateService {
     
     try {
       final request = await client.getUrl(Uri.parse(updateConfigUrl));
-      request.headers.setUserAgent("BestCoolApp/${currentVersionName}");
+      request.headers.set(HttpHeaders.userAgentHeader, "BestCoolApp/${currentVersionName}");
       
       final response = await request.close();
       
@@ -148,7 +148,7 @@ class UpdateService {
       final client = HttpClient();
       client.connectionTimeout = const Duration(seconds: 15);
       final request = await client.getUrl(Uri.parse(url));
-      request.headers.setUserAgent("BestCoolApp/${currentVersionName}");
+      request.headers.set(HttpHeaders.userAgentHeader, "BestCoolApp/${currentVersionName}");
       
       final response = await request.close();
       
