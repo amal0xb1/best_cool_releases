@@ -1,11 +1,14 @@
 import 'dart:convert';
 import 'dart:io';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:path_provider/path_provider.dart';
-import 'package:open_file_plus/open_file_plus.dart';
 
 class UpdateService {
+  // MethodChannel to talk to native Android host
+  static const MethodChannel _channel = MethodChannel('com.bestcool.best_cool/updater');
+
   // Local app version tracking
   static const int currentVersionCode = 2; 
   static const String currentVersionName = "1.2";
@@ -164,12 +167,13 @@ class UpdateService {
           Navigator.pop(context);
         }
         
-        // Trigger APK install
-        final result = await OpenFile.open(apkFile.path);
-        if (result.type != ResultType.done) {
+        // Trigger APK install via MethodChannel
+        try {
+          await _channel.invokeMethod('installApk', {'filePath': apkFile.path});
+        } on PlatformException catch (pe) {
           if (context.mounted) {
             ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(content: Text('Could not open installer: ${result.message}')),
+              SnackBar(content: Text('Failed to start native installer: ${pe.message}')),
             );
           }
         }
