@@ -10,7 +10,7 @@ class UpdateService {
   static const String currentVersionName = "1.2";
 
   // GitHub repository raw file endpoint
-  static const String updateConfigUrl = "https://raw.githubusercontent.com/itsam/best_cool_releases/main/update.json";
+  static const String updateConfigUrl = "https://raw.githubusercontent.com/amal0xb1/best_cool_releases/main/update.json";
 
   /// Checks for updates silently or manually, showing appropriate UI
   static Future<void> checkForUpdates(BuildContext context, {bool showSnackbarIfLatest = false, bool isAutoCheck = false}) async {
