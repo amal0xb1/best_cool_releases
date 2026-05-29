@@ -23,6 +23,8 @@ class UpdateService {
     
     try {
       final request = await client.getUrl(Uri.parse(updateConfigUrl));
+      request.headers.setUserAgent("BestCoolApp/${currentVersionName}");
+      
       final response = await request.close();
       
       if (response.statusCode == 200) {
@@ -77,12 +79,14 @@ class UpdateService {
   /// Downloads the APK in the background while displaying a glassmorphic progress bar, then triggers install
   static Future<void> _downloadAndInstallApk(BuildContext context, String url) async {
     final ValueNotifier<double> progressNotifier = ValueNotifier<double>(0.0);
+    BuildContext? dialogContext;
     
     // Show download progress dialog
     showDialog(
       context: context,
       barrierDismissible: false,
-      builder: (BuildContext context) {
+      builder: (BuildContext ctx) {
+        dialogContext = ctx;
         return ValueListenableBuilder<double>(
           valueListenable: progressNotifier,
           builder: (context, progress, child) {
@@ -137,9 +141,15 @@ class UpdateService {
       },
     );
 
+    // Wait a brief moment to guarantee dialog is fully mounted on navigator before network calls complete
+    await Future.delayed(const Duration(milliseconds: 150));
+
     try {
       final client = HttpClient();
+      client.connectionTimeout = const Duration(seconds: 15);
       final request = await client.getUrl(Uri.parse(url));
+      request.headers.setUserAgent("BestCoolApp/${currentVersionName}");
+      
       final response = await request.close();
       
       if (response.statusCode == 200) {
@@ -162,9 +172,9 @@ class UpdateService {
         await sink.close();
         client.close();
         
-        // Dismiss progress dialog
-        if (context.mounted) {
-          Navigator.pop(context);
+        // Dismiss progress dialog using its own context safely
+        if (dialogContext != null && dialogContext!.mounted) {
+          Navigator.of(dialogContext!).pop();
         }
         
         // Trigger APK install via MethodChannel
@@ -178,13 +188,27 @@ class UpdateService {
           }
         }
       } else {
-        throw Exception('Download failed with status code: ${response.statusCode}');
+        throw Exception('File not found (Status Code ${response.statusCode}). Please ensure app-release.apk is uploaded to GitHub.');
       }
     } catch (e) {
+      // Dismiss progress dialog safely using its own context
+      if (dialogContext != null && dialogContext!.mounted) {
+        Navigator.of(dialogContext!).pop();
+      }
+      
       if (context.mounted) {
-        Navigator.pop(context); // Dismiss progress dialog
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Download failed: $e')),
+        showDialog(
+          context: context,
+          builder: (context) => AlertDialog(
+            title: const Text('Download Failed'),
+            content: Text(e.toString().replaceAll("Exception: ", "")),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context),
+                child: const Text('OK'),
+              ),
+            ],
+          ),
         );
       }
     }
