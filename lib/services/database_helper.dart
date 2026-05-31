@@ -1,7 +1,6 @@
 import 'dart:io';
 import 'package:sqflite/sqflite.dart';
 import 'package:path/path.dart';
-import 'package:path_provider/path_provider.dart';
 import '../models/complaint.dart';
 
 class DatabaseHelper {
@@ -102,7 +101,7 @@ CREATE TABLE complaints (
     );
   }
 
-  Future<String> backupDatabase() async {
+  Future<String> backupDatabase(String targetDirectoryPath) async {
     final dbPath = await getDatabasesPath();
     final path = join(dbPath, 'best_cool.db');
     
@@ -111,29 +110,16 @@ CREATE TABLE complaints (
       throw 'Local database file is not initialized yet.';
     }
     
-    final directory = await getExternalStorageDirectory();
-    if (directory == null) {
-      throw 'External storage directory is not accessible.';
-    }
-    
-    await directory.create(recursive: true);
-    final backupPath = join(directory.path, 'best_cool_backup.db');
+    final backupPath = join(targetDirectoryPath, 'best_cool_backup.db');
     await dbFile.copy(backupPath);
     return backupPath;
   }
 
-  Future<bool> restoreDatabase() async {
-    final directory = await getExternalStorageDirectory();
-    if (directory == null) {
-      throw 'External storage directory is not accessible.';
-    }
-    
-    await directory.create(recursive: true);
-    final backupPath = join(directory.path, 'best_cool_backup.db');
-    final backupFile = File(backupPath);
+  Future<bool> restoreDatabase(String sourceFilePath) async {
+    final backupFile = File(sourceFilePath);
     
     if (!await backupFile.exists()) {
-      throw 'Backup file "best_cool_backup.db" not found in folder: Android/data/com.bestcool.best_cool/files/';
+      throw 'Selected backup file does not exist.';
     }
     
     final dbPath = await getDatabasesPath();

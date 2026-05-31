@@ -55,12 +55,12 @@ class ComplaintProvider with ChangeNotifier {
     await loadComplaints();
   }
 
-  Future<String> backupData() async {
-    return await DatabaseHelper.instance.backupDatabase();
+  Future<String> backupData(String targetDirectoryPath) async {
+    return await DatabaseHelper.instance.backupDatabase(targetDirectoryPath);
   }
 
-  Future<bool> restoreData() async {
-    final success = await DatabaseHelper.instance.restoreDatabase();
+  Future<bool> restoreData(String sourceFilePath) async {
+    final success = await DatabaseHelper.instance.restoreDatabase(sourceFilePath);
     if (success) {
       await loadComplaints();
     }

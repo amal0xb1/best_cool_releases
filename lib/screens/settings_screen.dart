@@ -8,6 +8,7 @@ import '../services/update_service.dart';
 import '../services/notification_service.dart';
 import 'edit_profile_screen.dart';
 import 'package:permission_handler/permission_handler.dart';
+import 'package:file_picker/file_picker.dart';
 
 class SettingsScreen extends StatefulWidget {
   const SettingsScreen({super.key});
@@ -24,24 +25,49 @@ class _SettingsScreenState extends State<SettingsScreen> {
     ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message)));
   }
 
-  Future<void> _backup(BuildContext context) async {
-    setState(() => _isLoading = true);
-    final provider = Provider.of<ComplaintProvider>(context, listen: false);
+  Future<void> _backup() async {
     try {
-      final backupPath = await provider.backupData();
+      final String? selectedDirectory = await FilePicker.getDirectoryPath();
+      if (selectedDirectory == null) {
+        _showSnackBar('Backup cancelled.');
+        return;
+      }
+
+      if (!mounted) return;
+      setState(() => _isLoading = true);
+      final provider = Provider.of<ComplaintProvider>(context, listen: false);
+      final backupPath = await provider.backupData(selectedDirectory);
+      
+      if (!mounted) return;
       setState(() => _isLoading = false);
       _showSnackBar('Backup successful! Saved to $backupPath');
     } catch (e) {
-      setState(() => _isLoading = false);
-      _showSnackBar('Backup failed: $e');
+      if (mounted) {
+        setState(() => _isLoading = false);
+        _showSnackBar('Backup failed: $e');
+      }
     }
   }
 
-  Future<void> _restore(BuildContext context) async {
-    setState(() => _isLoading = true);
-    final provider = Provider.of<ComplaintProvider>(context, listen: false);
+  Future<void> _restore() async {
     try {
-      final success = await provider.restoreData();
+      final FilePickerResult? result = await FilePicker.pickFiles(
+        type: FileType.any,
+      );
+
+      if (result == null || result.files.single.path == null) {
+        _showSnackBar('Restore cancelled.');
+        return;
+      }
+
+      final String selectedFile = result.files.single.path!;
+
+      if (!mounted) return;
+      setState(() => _isLoading = true);
+      final provider = Provider.of<ComplaintProvider>(context, listen: false);
+      final success = await provider.restoreData(selectedFile);
+      
+      if (!mounted) return;
       setState(() => _isLoading = false);
       if (success) {
         _showSnackBar('Restore successful! Data loaded.');
@@ -49,8 +75,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
         _showSnackBar('Restore failed: Unknown error.');
       }
     } catch (e) {
-      setState(() => _isLoading = false);
-      _showSnackBar('Restore failed: $e');
+      if (mounted) {
+        setState(() => _isLoading = false);
+        _showSnackBar('Restore failed: $e');
+      }
     }
   }
 
@@ -286,7 +314,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
               label: 'Backup Data',
               sub: 'Save database backup securely to storage',
               color: Colors.teal,
-              onTap: () => _backup(context),
+              onTap: () => _backup(),
             ),
              const SizedBox(height: 12),
             _SettingsTile(
@@ -294,7 +322,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
               label: 'Import / Restore Data',
               sub: 'Load backup database from local storage',
               color: Colors.green,
-              onTap: () => _restore(context),
+              onTap: () => _restore(),
             ),
             const SizedBox(height: 12),
             _SettingsTile(
