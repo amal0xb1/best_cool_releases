@@ -38,10 +38,12 @@ void callbackDispatcher() {
       final now = DateTime.now();
       final todayStr = '${now.year}-${now.month}-${now.day}';
 
-      if (now.hour == 10) {
+      // Morning reminder: If between 10:00 AM and 4:00 PM (10:00 - 15:59)
+      if (now.hour >= 10 && now.hour < 16) {
         if (prefs.getString('last10AM') != todayStr) {
           await flutterLocalNotificationsPlugin.show(
-            id: 9991, title: 'Good Morning! ☀️', 
+            id: 9991,
+            title: 'Good Morning! ☀️', 
             body: 'You have ${pendingComplaints.length} pending service requests today.',
             notificationDetails: platformDetails,
           );
@@ -49,10 +51,12 @@ void callbackDispatcher() {
         }
       }
 
-      if (now.hour == 23) {
+      // Evening reminder: If between 11:00 PM and 3:00 AM (23:00 - 02:59)
+      if (now.hour >= 23 || now.hour < 3) {
         if (prefs.getString('last11PM') != todayStr) {
           await flutterLocalNotificationsPlugin.show(
-            id: 9992, title: 'Tomorrow\'s Works 📅', 
+            id: 9992,
+            title: 'Tomorrow\'s Works 📅', 
             body: '${pendingComplaints.length} pending works are scheduled for tomorrow.',
             notificationDetails: platformDetails,
           );

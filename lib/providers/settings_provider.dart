@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import '../services/notification_service.dart';
 
 class SettingsProvider with ChangeNotifier {
   bool _isNightMode = false;
@@ -33,6 +34,22 @@ class SettingsProvider with ChangeNotifier {
     _userName = prefs.getString('userName') ?? 'Technician';
     _userRole = prefs.getString('userRole') ?? 'Service Agent';
     _userPhotoPath = prefs.getString('userPhotoPath');
+    
+    // Auto-schedule daily reminders if they are enabled
+    if (_dailyReminders) {
+      try {
+        await NotificationService.scheduleDailyReminders();
+      } catch (e) {
+        debugPrint('Error auto-scheduling daily reminders: $e');
+      }
+    } else {
+      try {
+        await NotificationService.cancelDailyReminders();
+      } catch (e) {
+        debugPrint('Error cancelling daily reminders: $e');
+      }
+    }
+
     notifyListeners();
   }
 
@@ -61,6 +78,21 @@ class SettingsProvider with ChangeNotifier {
     _dailyReminders = value;
     final prefs = await SharedPreferences.getInstance();
     await prefs.setBool('dailyReminders', value);
+    
+    if (value) {
+      try {
+        await NotificationService.scheduleDailyReminders();
+      } catch (e) {
+        debugPrint('Error scheduling daily reminders: $e');
+      }
+    } else {
+      try {
+        await NotificationService.cancelDailyReminders();
+      } catch (e) {
+        debugPrint('Error cancelling daily reminders: $e');
+      }
+    }
+    
     notifyListeners();
   }
 
