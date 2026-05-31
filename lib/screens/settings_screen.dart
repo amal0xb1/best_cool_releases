@@ -5,6 +5,7 @@ import 'package:provider/provider.dart';
 import '../providers/complaint_provider.dart';
 import '../providers/settings_provider.dart';
 import '../services/update_service.dart';
+import '../services/notification_service.dart';
 import 'edit_profile_screen.dart';
 import 'package:permission_handler/permission_handler.dart';
 
@@ -228,6 +229,11 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     if (status.isDenied) {
                       _showSnackBar('Notification permission is required for Daily Reminders.');
                       return;
+                    }
+                    try {
+                      await NotificationService.showTestNotification();
+                    } catch (e) {
+                      debugPrint('Error showing test notification: $e');
                     }
                   }
                   settings.toggleDailyReminders(val);

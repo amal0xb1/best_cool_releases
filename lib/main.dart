@@ -6,12 +6,20 @@ import 'providers/settings_provider.dart';
 import 'screens/dashboard_screen.dart';
 import 'package:workmanager/workmanager.dart';
 import 'services/background_service.dart';
+import 'services/notification_service.dart';
 
 import 'dart:ui';
 import 'package:flutter/foundation.dart';
 
-void main() {
+void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+
+  // Initialize notifications & register Android channels
+  try {
+    await NotificationService.initialize();
+  } catch (e) {
+    debugPrint('Error initializing local notifications: $e');
+  }
 
   // Catch Flutter framework errors
   FlutterError.onError = (FlutterErrorDetails details) {

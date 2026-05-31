@@ -10,8 +10,8 @@ class UpdateService {
   static const MethodChannel _channel = MethodChannel('com.bestcool.best_cool/updater');
 
   // Local app version tracking
-  static const int currentVersionCode = 2; 
-  static const String currentVersionName = "1.2";
+  static const int currentVersionCode = 3; 
+  static const String currentVersionName = "1.3";
 
   // GitHub repository raw file endpoint
   static const String updateConfigUrl = "https://raw.githubusercontent.com/amal0xb1/best_cool_releases/main/update.json";
@@ -23,7 +23,7 @@ class UpdateService {
     
     try {
       final request = await client.getUrl(Uri.parse(updateConfigUrl));
-      request.headers.set(HttpHeaders.userAgentHeader, "BestCoolApp/${currentVersionName}");
+      request.headers.set(HttpHeaders.userAgentHeader, "BestCoolApp/$currentVersionName");
       
       final response = await request.close();
       
@@ -148,7 +148,7 @@ class UpdateService {
       final client = HttpClient();
       client.connectionTimeout = const Duration(seconds: 15);
       final request = await client.getUrl(Uri.parse(url));
-      request.headers.set(HttpHeaders.userAgentHeader, "BestCoolApp/${currentVersionName}");
+      request.headers.set(HttpHeaders.userAgentHeader, "BestCoolApp/$currentVersionName");
       
       final response = await request.close();
       
