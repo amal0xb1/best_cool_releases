@@ -93,7 +93,7 @@ void callbackDispatcher() {
           final int remoteVersionCode = data['versionCode'] ?? 0;
           final String remoteVersionName = data['versionName'] ?? '';
           
-          const int currentVersionCode = 3;
+          const int currentVersionCode = 4;
 
           if (remoteVersionCode > currentVersionCode) {
             await flutterLocalNotificationsPlugin.show(
